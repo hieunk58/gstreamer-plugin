@@ -38,3 +38,19 @@ gst_video_filter_class_init (GstVideoFilterClass *kclass)
         "A plugin for video streaming",
         "Hieu Nguyen <khachieunk@gmail.com>");
 }
+
+static boolean plugin_init (GstPlugin *plugin)
+{
+    return GST_ELEMENT_REGISTER (video_filter, plugin);
+}
+
+GST_PLUGIN_DEFINE (GST_VERSION_MAJOR,
+    GST_VERSION_MINOR,
+    video_filter,
+    "A plugin for video streaming",
+    plugin_init,
+    "1.0",
+    "LGPL",
+    "gst-video-plugin",
+    "https://github.com/hieunk58/gstreamer-plugin"
+)
