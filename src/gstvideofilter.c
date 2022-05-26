@@ -2,6 +2,8 @@
 
 static void gst_video_filter_class_init (GstVideoFilterClass *kclass);
 static void gst_video_filter_init (GstVideoFilter *filter);
+static GstFlowReturn gst_video_filter_sink_chain (GstPad *pad, 
+    GstObject *parent, GstBuffer *buf);
 
 /* Pad templates */
 static GstStaticPadTemplate src_factory =
@@ -45,6 +47,9 @@ static void gst_video_filter_init (GstVideoFilter *filter) {
 
     /* Sinkpad */
     filter->sinkpad = gst_pad_new_from_static_template (&sink_factory, "sink");
+    
+    gst_pad_set_chain_function (filter->sinkpad, GST_DEBUG_FUNCPTR (gst_video_filter_sink_chain));
+    
     gst_element_add_pad (GST_ELEMENT (filter), filter->sinkpad);
 
     /* TODO Configure Sinkpad */
@@ -56,6 +61,25 @@ static void gst_video_filter_init (GstVideoFilter *filter) {
     /* TODO Configure Sourcepad */
 
     filter->silent = FALSE;
+}
+
+static GstFlowReturn gst_video_filter_sink_chain (GstPad *pad, 
+    GstObject *parent, GstBuffer *buf)
+{
+    GstVideoFilter *filter = GST_VIDEO_FILTER (parent);
+    GstBuffer *outbuf = NULL;
+
+    // process data with buf then assign to outbuf
+    
+    gst_buffer_unref (buf);
+
+    if (!outbuf) {
+        /* something went wrong - signal an error */
+        GST_ELEMENT_ERROR (GST_ELEMENT (filter), STREAM, FAILED, (NULL), (NULL));
+        return GST_FLOW_ERROR;
+    }
+    
+    return gst_pad_push (filter->srcpad, outbuf);
 }
 
 static boolean plugin_init (GstPlugin *plugin)
