@@ -1,6 +1,7 @@
 #include "gstvideofilter.h"
 
 static void gst_video_filter_class_init (GstVideoFilterClass *kclass);
+static void gst_video_filter_init (GstVideoFilter *filter);
 
 /* Pad templates */
 static GstStaticPadTemplate src_factory =
@@ -37,6 +38,24 @@ gst_video_filter_class_init (GstVideoFilterClass *kclass)
         "Generic",
         "A plugin for video streaming",
         "Hieu Nguyen <khachieunk@gmail.com>");
+}
+
+static void gst_video_filter_init (GstVideoFilter *filter) {
+    GST_DEBUG ("gst_video_filter_init");
+
+    /* Sinkpad */
+    filter->sinkpad = gst_pad_new_from_static_template (&sink_factory, "sink");
+    gst_element_add_pad (GST_ELEMENT (filter), filter->sinkpad);
+
+    /* TODO Configure Sinkpad */
+    
+    /* Sourcepad */
+    filter->srcpad = gst_pad_new_from_static_template (&src_factory, "src");
+    gst_element_add_pad (GST_ELEMENT (filter), filter->srcpad);
+
+    /* TODO Configure Sourcepad */
+
+    filter->silent = FALSE;
 }
 
 static boolean plugin_init (GstPlugin *plugin)
