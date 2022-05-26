@@ -17,7 +17,7 @@ typedef struct _GstVideoFilter {
 
 
 typedef struct _GstVideoFilterClass {
-    GstElementClass parent_class;
+    GstElementClass base_class;
 
 } GstVideoFilterClass;
 
