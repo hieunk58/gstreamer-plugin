@@ -6,6 +6,8 @@ static GstFlowReturn gst_video_filter_sink_chain (GstPad *pad,
     GstObject *parent, GstBuffer *buf);
 static gboolean gst_video_filter_sink_event (GstPad *pad,
     GstObject *parent, GstEvent *event);
+static gboolean gst_video_filter_src_event (GstPad *pad,
+    GstObject *parent, GstEvent *event);
 static gboolean gst_video_filter_query (GstPad *pad,
     GstObject *parent, GstQuery *query);
 
@@ -61,6 +63,7 @@ static void gst_video_filter_init (GstVideoFilter *filter) {
     
     /* Sourcepad */
     filter->srcpad = gst_pad_new_from_static_template (&src_factory, "src");
+    gst_pad_set_event_function (filter->srcpad, GST_DEBUG_FUNCPTR (gst_video_filter_src_event));
     gst_pad_set_query_function (filter->srcpad, GST_DEBUG_FUNCPTR(gst_video_filter_query));
 
     gst_element_add_pad (GST_ELEMENT (filter), filter->srcpad);
@@ -110,6 +113,29 @@ static gboolean gst_video_filter_sink_event (GstPad *pad,
         ret = gst_pad_event_default (pad, parent, event);
         break;
     }
+
+    return ret;
+}
+
+static gboolean gst_video_filter_src_event (GstPad *pad,
+    GstObject *parent, GstEvent *event)
+{
+    gboolean ret = TRUE;
+    GstVideoFilter *filter = GST_VIDEO_FILTER (parent);
+
+    // TODO
+    switch (GST_EVENT_TYPE (event))
+    {
+    case GST_EVENT_SEEK:
+        break;
+    case GST_EVENT_NAVIGATION:       
+        break;
+    default:
+        ret = gst_pad_event_default (pad, parent, event);
+        break;
+    }
+
+    ret = gst_pad_push_event (filter->sinkpad, event);
 
     return ret;
 }
