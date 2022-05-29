@@ -4,6 +4,8 @@ static void gst_video_filter_class_init (GstVideoFilterClass *kclass);
 static void gst_video_filter_init (GstVideoFilter *filter);
 static GstFlowReturn gst_video_filter_sink_chain (GstPad *pad, 
     GstObject *parent, GstBuffer *buf);
+static gboolean gst_video_filter_sink_event (GstPad *pad,
+    GstObject *parent, GstEvent *event);
 
 /* Pad templates */
 static GstStaticPadTemplate src_factory =
@@ -70,7 +72,7 @@ static GstFlowReturn gst_video_filter_sink_chain (GstPad *pad,
     GstBuffer *outbuf = NULL;
 
     // process data with buf then assign to outbuf
-    
+
     gst_buffer_unref (buf);
 
     if (!outbuf) {
@@ -80,6 +82,31 @@ static GstFlowReturn gst_video_filter_sink_chain (GstPad *pad,
     }
     
     return gst_pad_push (filter->srcpad, outbuf);
+}
+
+static gboolean gst_video_filter_sink_event (GstPad *pad,
+    GstObject *parent, GstEvent *event)
+{
+    gboolean ret = TRUE;
+    GstVideoFilter *filter = GST_VIDEO_FILTER (parent);
+
+    switch (GST_EVENT_TYPE (event))
+    {
+    case GST_EVENT_CAPS:
+        /* handle the format here */
+        ret = gst_pad_push_event (filter->srcpad, event);
+        break;
+    case GST_EVENT_EOS:
+        /* end of stream, close down all stream */
+        // TODO call function gst_video_filter_stop_processing (filter);
+        ret = gst_pad_push_event (filter->srcpad, event);
+        break;
+    default:
+        ret = gst_pad_event_default (pad, parent, event);
+        break;
+    }
+
+    return ret;
 }
 
 static boolean plugin_init (GstPlugin *plugin)
