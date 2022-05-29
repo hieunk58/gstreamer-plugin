@@ -33,7 +33,7 @@ gst_video_filter_class_init (GstVideoFilterClass *kclass)
 {
     GST_DEBUG ("gst_video_filter_class_init");
 
-    GstElementClass *element_class = GST_ELEMENT_CLASS (klass);
+    GstElementClass *element_class = GST_ELEMENT_CLASS (kclass);
 
     gst_element_class_add_pad_template (element_class,
     gst_static_pad_template_get (&src_factory));
@@ -165,10 +165,15 @@ static gboolean gst_video_filter_query (GstPad *pad,
     return ret;
 }
 
-static boolean plugin_init (GstPlugin *plugin)
+static gboolean plugin_init (GstPlugin *plugin)
 {
-    return GST_ELEMENT_REGISTER (video_filter, plugin);
+    return gst_element_register (plugin, "video_filter", GST_RANK_NONE, GST_TYPE_VIDEO_FILTER);
 }
+
+
+#ifndef PACKAGE
+#define PACKAGE "video_filter"
+#endif
 
 GST_PLUGIN_DEFINE (GST_VERSION_MAJOR,
     GST_VERSION_MINOR,
