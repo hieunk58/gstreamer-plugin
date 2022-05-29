@@ -6,6 +6,8 @@ static GstFlowReturn gst_video_filter_sink_chain (GstPad *pad,
     GstObject *parent, GstBuffer *buf);
 static gboolean gst_video_filter_sink_event (GstPad *pad,
     GstObject *parent, GstEvent *event);
+static gboolean gst_video_filter_query (GstPad *pad,
+    GstObject *parent, GstQuery *query);
 
 /* Pad templates */
 static GstStaticPadTemplate src_factory =
@@ -49,15 +51,18 @@ static void gst_video_filter_init (GstVideoFilter *filter) {
 
     /* Sinkpad */
     filter->sinkpad = gst_pad_new_from_static_template (&sink_factory, "sink");
-    
+    gst_pad_set_event_function (filter->sinkpad, GST_DEBUG_FUNCPTR (gst_video_filter_sink_event));
     gst_pad_set_chain_function (filter->sinkpad, GST_DEBUG_FUNCPTR (gst_video_filter_sink_chain));
-    
+    gst_pad_set_query_function (filter->sinkpad, GST_DEBUG_FUNCPTR (gst_video_filter_query));
+
     gst_element_add_pad (GST_ELEMENT (filter), filter->sinkpad);
 
     /* TODO Configure Sinkpad */
     
     /* Sourcepad */
     filter->srcpad = gst_pad_new_from_static_template (&src_factory, "src");
+    gst_pad_set_query_function (filter->srcpad, GST_DEBUG_FUNCPTR(gst_video_filter_query));
+
     gst_element_add_pad (GST_ELEMENT (filter), filter->srcpad);
 
     /* TODO Configure Sourcepad */
@@ -103,6 +108,31 @@ static gboolean gst_video_filter_sink_event (GstPad *pad,
         break;
     default:
         ret = gst_pad_event_default (pad, parent, event);
+        break;
+    }
+
+    return ret;
+}
+
+static gboolean gst_video_filter_query (GstPad *pad,
+    GstObject *parent, GstQuery *query)
+{
+    gboolean ret = TRUE;
+    GstVideoFilter *filter = GST_VIDEO_FILTER (parent);
+
+    switch (GST_QUERY_TYPE (query))
+    {
+    case GST_QUERY_POSITION:
+        /* report the current position */
+        break;
+    case GST_QUERY_DURATION:
+        /* report the current duration */
+        break;
+    case GST_QUERY_CAPS:
+        /* report the supported caps */
+        break;
+    default:
+        ret = gst_pad_query_default (pad, parent, query);
         break;
     }
 
