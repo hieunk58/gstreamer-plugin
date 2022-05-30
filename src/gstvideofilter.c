@@ -1,7 +1,21 @@
 #include "gstvideofilter.h"
 
+/* TODO example properties definition */
+enum
+{
+    PROP_0,
+    PROP_1,
+    PROP_2
+};
+
 static void gst_video_filter_class_init (GstVideoFilterClass *kclass);
 static void gst_video_filter_init (GstVideoFilter *filter);
+static void gst_video_filter_set_property (GObject *object, guint prop_id,
+    const GValue *value,
+    GParamSpec *pspec);
+static void gst_video_filter_get_property (GObject *object, guint prop_id,
+    GValue *value,
+    GParamSpec *pspec);
 static GstFlowReturn gst_video_filter_sink_chain (GstPad *pad, 
     GstObject *parent, GstBuffer *buf);
 static gboolean gst_video_filter_sink_event (GstPad *pad,
@@ -34,6 +48,7 @@ gst_video_filter_class_init (GstVideoFilterClass *kclass)
     GST_DEBUG ("gst_video_filter_class_init");
 
     GstElementClass *element_class = GST_ELEMENT_CLASS (kclass);
+    GObjectClass *object_class = G_OBJECT_CLASS (kclass);
 
     gst_element_class_add_pad_template (element_class,
     gst_static_pad_template_get (&src_factory));
@@ -46,6 +61,26 @@ gst_video_filter_class_init (GstVideoFilterClass *kclass)
         "Generic",
         "A plugin for video streaming",
         "Hieu Nguyen <khachieunk@gmail.com>");
+    
+    /* define virtual function pointers */
+    object_class->set_property = gst_video_filter_set_property;
+    object_class->get_property = gst_video_filter_get_property;
+
+    /* define properties */
+    g_object_class_install_property (object_class, PROP_0,
+        g_param_spec_boolean ("silent", "Silent",
+        "example boolean property",
+        FALSE, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+
+    g_object_class_install_property (object_class, PROP_1,
+        g_param_spec_float("extend-border", "Extend Border Factor", "How much the border "
+        "of the video should be extended.",
+        0.10f, 0.99f, 0.25f, G_PARAM_READWRITE));
+
+    g_object_class_install_property (object_class, PROP_2,
+        g_param_spec_int("frame-window-size", "Frame Window Size", "How many frames to retarget "
+        "at a time from an incoming stream.",
+        10, 500, 100, G_PARAM_READWRITE));
 }
 
 static void gst_video_filter_init (GstVideoFilter *filter) {
@@ -71,6 +106,50 @@ static void gst_video_filter_init (GstVideoFilter *filter) {
     /* TODO Configure Sourcepad */
 
     filter->silent = FALSE;
+}
+
+static void gst_video_filter_set_property (GObject *object, guint prop_id,
+    const GValue *value,
+    GParamSpec *pspec)
+{
+    GST_DEBUG ("gst_video_filter_set_property");
+    GstVideoFilter *filter = GST_VIDEO_FILTER (object);
+
+    switch (prop_id)
+    {
+    case PROP_0:
+        filter->silent = g_value_get_boolean (value);
+        g_print ("Silent argument was changed to %s\n",
+            filter->silent ? "true" : "false");
+        break;
+    case PROP_1:
+        break;
+    case PROP_2:
+        break;
+    default:
+        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+        break;
+    }
+}
+
+static void gst_video_filter_get_property (GObject *object, guint prop_id,
+    GValue *value,
+    GParamSpec *pspec)
+{
+    GST_DEBUG ("gst_video_filter_get_property");
+    GstVideoFilter *filter = GST_VIDEO_FILTER (object);
+
+    switch (prop_id)
+    {
+    case PROP_0:
+        g_value_set_boolean (value, filter->silent);
+        break;
+    
+    default:
+        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+        break;
+    }
+
 }
 
 static GstFlowReturn gst_video_filter_sink_chain (GstPad *pad, 
