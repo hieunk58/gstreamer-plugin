@@ -1,5 +1,7 @@
 #include "gstvideofilter.h"
 
+#define BLOCKSIZE 2048
+
 /* TODO example properties definition */
 enum
 {
@@ -24,6 +26,10 @@ static gboolean gst_video_filter_src_event (GstPad *pad,
     GstObject *parent, GstEvent *event);
 static gboolean gst_video_filter_query (GstPad *pad,
     GstObject *parent, GstQuery *query);
+static gboolean gst_video_filter_activate (GstPad *pad, GstObject *parent);
+static gboolean gst_video_filter_activate_mode (GstPad *pad, 
+    GstObject *parent, GstPadMode mode, gboolean active);
+static void gst_video_filter_loop (GstVideoFilter *filter);
 
 /* Pad templates */
 static GstStaticPadTemplate src_factory =
@@ -91,6 +97,8 @@ static void gst_video_filter_init (GstVideoFilter *filter) {
     gst_pad_set_event_function (filter->sinkpad, GST_DEBUG_FUNCPTR (gst_video_filter_sink_event));
     gst_pad_set_chain_function (filter->sinkpad, GST_DEBUG_FUNCPTR (gst_video_filter_sink_chain));
     gst_pad_set_query_function (filter->sinkpad, GST_DEBUG_FUNCPTR (gst_video_filter_query));
+    gst_pad_set_activate_function (filter->sinkpad, GST_DEBUG_FUNCPTR (gst_video_filter_activate));
+    gst_pad_set_activatemode_function (filter->sinkpad, GST_DEBUG_FUNCPTR (gst_video_filter_activate_mode));
 
     gst_element_add_pad (GST_ELEMENT (filter), filter->sinkpad);
 
@@ -100,7 +108,8 @@ static void gst_video_filter_init (GstVideoFilter *filter) {
     filter->srcpad = gst_pad_new_from_static_template (&src_factory, "src");
     gst_pad_set_event_function (filter->srcpad, GST_DEBUG_FUNCPTR (gst_video_filter_src_event));
     gst_pad_set_query_function (filter->srcpad, GST_DEBUG_FUNCPTR(gst_video_filter_query));
-
+    gst_pad_set_activate_function (filter->srcpad, GST_DEBUG_FUNCPTR (gst_video_filter_activate));
+    gst_pad_set_activatemode_function (filter->srcpad, GST_DEBUG_FUNCPTR (gst_video_filter_activate_mode));
     gst_element_add_pad (GST_ELEMENT (filter), filter->srcpad);
 
     /* TODO Configure Sourcepad */
@@ -242,6 +251,106 @@ static gboolean gst_video_filter_query (GstPad *pad,
     }
 
     return ret;
+}
+
+static gboolean gst_video_filter_activate (GstPad *pad, GstObject *parent)
+{
+    GstQuery *query;
+    gboolean pull_mode;
+
+    /* check what upstream scheduling is supported */
+    query = gst_query_new_scheduling ();
+
+    if (!gst_pad_peer_query (pad, query)) {
+        gst_query_unref (query);
+        goto activate_push;
+    }
+
+    /* check if pull mode is supported */
+    pull_mode = gst_query_has_scheduling_mode_with_flags (query, GST_PAD_MODE_PULL, 
+        GST_SCHEDULING_FLAG_SEEKABLE);
+    gst_query_unref (query);
+
+    if (!pull_mode) goto activate_push;
+
+    /* activate in pull mode now. GStreamer will also activate the upstream peer in pull mode */
+    return gst_pad_activate_mode (pad, GST_PAD_MODE_PULL, TRUE);
+
+activate_push:
+    {
+        /* something went wrong, fallback to push mode */
+        return gst_pad_activate_mode (pad, GST_PAD_MODE_PUSH, TRUE);
+    }
+}
+
+static gboolean gst_video_filter_activate_mode (GstPad *pad, 
+    GstObject *parent, GstPadMode mode, gboolean active)
+{
+    gboolean ret = FALSE;
+    GstVideoFilter *filter = GST_VIDEO_FILTER (parent);
+
+    switch (mode)
+    {
+    case GST_PAD_MODE_PULL:
+        if (active) {
+            filter->offset = 0;
+            ret = gst_pad_start_task (pad, 
+                    (GstTaskFunction) gst_video_filter_loop, filter, NULL);
+        } else {
+            ret = gst_pad_stop_task (pad);
+        }     
+        break;
+    case GST_PAD_MODE_PUSH:
+        ret = TRUE;
+        break;
+    default:
+        /* unknown scheduling mode */
+        break;
+    }
+
+    return ret;
+}
+
+static void gst_video_filter_loop (GstVideoFilter *filter)
+{
+    GstFlowReturn ret = TRUE;
+    guint64 len;
+    GstFormat format = GST_FORMAT_BYTES;
+    GstBuffer *buf = NULL;
+
+    if (!gst_pad_query_duration (filter->sinkpad, format, &len)) {
+        GST_DEBUG_OBJECT (filter, "failed to query duration, pausing"); 
+        goto stop;
+    }
+
+    if (filter->offset >= len) {
+        GST_DEBUG_OBJECT (filter, "at end of input, sending EOS, pausing");
+        gst_pad_push_event (filter->srcpad, gst_event_new_eos ());
+        goto stop;
+    }
+
+    /* read BLOCKSIZE bytes from byte offset */
+    ret = gst_pad_pull_range (filter->sinkpad, filter->offset, BLOCKSIZE, &buf);
+    if (ret != GST_FLOW_OK) {
+        GST_DEBUG_OBJECT (filter, "pull_range failed: %s", gst_flow_get_name (ret));
+        goto stop;
+    }
+    /* get pull range ok, now push buffer downstream */
+    ret = gst_pad_push (filter->srcpad, buf);
+    buf = NULL;
+
+    if (ret != GST_FLOW_OK) {
+        GST_DEBUG_OBJECT (filter, "pad_push failed: %s", gst_flow_get_name (ret));
+        goto stop;
+    }
+
+    /* everything is fine, increase offset and wait to be called again */
+    filter->offset += BLOCKSIZE;
+    return;
+
+stop:
+    GST_DEBUG_OBJECT (filter, "pausing task");
+    gst_pad_pause_task (filter->sinkpad);
 }
 
 static gboolean plugin_init (GstPlugin *plugin)

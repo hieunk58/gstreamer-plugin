@@ -11,6 +11,8 @@ typedef struct _GstVideoFilter {
 
     GstPad *sinkpad, *srcpad;
 
+    guint offset;
+
     gboolean silent;
 
 } GstVideoFilter;
