@@ -30,6 +30,8 @@ static gboolean gst_video_filter_activate (GstPad *pad, GstObject *parent);
 static gboolean gst_video_filter_activate_mode (GstPad *pad, 
     GstObject *parent, GstPadMode mode, gboolean active);
 static void gst_video_filter_loop (GstVideoFilter *filter);
+static GstFlowReturn gst_video_filter_get_range (GstPad *pad, GstObject *parent,
+    guint64 offset, guint length, GstBuffer **buf);
 
 /* Pad templates */
 static GstStaticPadTemplate src_factory =
@@ -110,6 +112,7 @@ static void gst_video_filter_init (GstVideoFilter *filter) {
     gst_pad_set_query_function (filter->srcpad, GST_DEBUG_FUNCPTR(gst_video_filter_query));
     gst_pad_set_activate_function (filter->srcpad, GST_DEBUG_FUNCPTR (gst_video_filter_activate));
     gst_pad_set_activatemode_function (filter->srcpad, GST_DEBUG_FUNCPTR (gst_video_filter_activate_mode));
+    gst_pad_set_getrange_function (filter->srcpad, GST_DEBUG_FUNCPTR (gst_video_filter_get_range));
     gst_element_add_pad (GST_ELEMENT (filter), filter->srcpad);
 
     /* TODO Configure Sourcepad */
@@ -351,6 +354,13 @@ static void gst_video_filter_loop (GstVideoFilter *filter)
 stop:
     GST_DEBUG_OBJECT (filter, "pausing task");
     gst_pad_pause_task (filter->sinkpad);
+}
+
+static GstFlowReturn gst_video_filter_get_range (GstPad *pad, GstObject *parent,
+    guint64 offset, guint length, GstBuffer **buf)
+{
+    /* TODO */
+    return GST_FLOW_OK;
 }
 
 static gboolean plugin_init (GstPlugin *plugin)
