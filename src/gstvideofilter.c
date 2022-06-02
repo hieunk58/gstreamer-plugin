@@ -39,7 +39,13 @@ GST_STATIC_PAD_TEMPLATE (
     "src",
     GST_PAD_SRC,
     GST_PAD_ALWAYS,
-    GST_STATIC_CAPS ("ANY") // TODO specify supported video type
+    GST_STATIC_CAPS (
+        "video/x-raw, "
+        "format = (string) I420, "
+        "framerate = (fraction) [ 0/1, 2147483647/1 ], " 
+        "width = (int) [ 1, 2147483647 ], " 
+        "height = (int) [ 1, 2147483647 ]"
+    )
 );
 
 static GstStaticPadTemplate sink_factory =
@@ -47,7 +53,13 @@ GST_STATIC_PAD_TEMPLATE (
     "sink",
     GST_PAD_SINK,
     GST_PAD_ALWAYS,
-    GST_STATIC_CAPS ("ANY") // TODO specify supported video type
+    GST_STATIC_CAPS (
+        "video/x-raw, "
+        "format = (string) I420, "
+        "framerate = (fraction) [ 0/1, 2147483647/1 ], " 
+        "width = (int) [ 1, 2147483647 ], " 
+        "height = (int) [ 1, 2147483647 ]"
+    )
 );
 
 static void
@@ -96,6 +108,9 @@ static void gst_video_filter_init (GstVideoFilter *filter) {
 
     /* Sinkpad */
     filter->sinkpad = gst_pad_new_from_static_template (&sink_factory, "sink");
+
+    gst_pad_use_fixed_caps(filter->sinkpad);
+
     gst_pad_set_event_function (filter->sinkpad, GST_DEBUG_FUNCPTR (gst_video_filter_sink_event));
     gst_pad_set_chain_function (filter->sinkpad, GST_DEBUG_FUNCPTR (gst_video_filter_sink_chain));
     gst_pad_set_query_function (filter->sinkpad, GST_DEBUG_FUNCPTR (gst_video_filter_query));
@@ -108,6 +123,9 @@ static void gst_video_filter_init (GstVideoFilter *filter) {
     
     /* Sourcepad */
     filter->srcpad = gst_pad_new_from_static_template (&src_factory, "src");
+
+    gst_pad_use_fixed_caps(filter->srcpad);
+
     gst_pad_set_event_function (filter->srcpad, GST_DEBUG_FUNCPTR (gst_video_filter_src_event));
     gst_pad_set_query_function (filter->srcpad, GST_DEBUG_FUNCPTR(gst_video_filter_query));
     gst_pad_set_activate_function (filter->srcpad, GST_DEBUG_FUNCPTR (gst_video_filter_activate));
