@@ -32,6 +32,8 @@ static gboolean gst_video_filter_activate_mode (GstPad *pad,
 static void gst_video_filter_loop (GstVideoFilter *filter);
 static GstFlowReturn gst_video_filter_get_range (GstPad *pad, GstObject *parent,
     guint64 offset, guint length, GstBuffer **buf);
+static gboolean gst_video_filter_query_caps (GstPad *pad, GstObject *parent,
+    GstQuery *query);
 
 /* Pad templates */
 static GstStaticPadTemplate src_factory =
@@ -264,8 +266,39 @@ static gboolean gst_video_filter_query (GstPad *pad,
         /* report the current duration */
         break;
     case GST_QUERY_CAPS:
+    {
         /* report the supported caps */
+        GstPad *otherpad;
+        GstCaps *temp, *caps, *filt, *tcaps;
+        gint i;
+
+        otherpad = (pad == filter->srcpad) ? filter->sinkpad : filter->srcpad;
+        caps = gst_pad_get_allowed_caps (otherpad);
+
+        gst_query_parse_caps (query, &filt);
+        for (i = 0; i < gst_caps_get_size (caps); ++i) {
+            GstStructure *structure = gst_caps_get_structure (caps, i);
+            gst_structure_remove_field (structure, "rate");
+        }
+
+        /* return intersect results with padtemplate */
+        tcaps = gst_pad_get_pad_template_caps (pad);
+        if (tcaps) {
+            temp = gst_caps_intersect (caps, tcaps);
+            gst_caps_unref (caps);
+            gst_caps_unref (tcaps);
+            caps = temp;
+        }
+        if (filt) {
+            temp = gst_caps_intersect (caps, filt);
+            gst_caps_unref (caps);
+            caps = temp;
+        }
+        gst_query_set_caps_result (query, caps);
+        gst_caps_unref (caps);
+        ret = TRUE;
         break;
+    }
     default:
         ret = gst_pad_query_default (pad, parent, query);
         break;
